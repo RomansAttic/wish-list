@@ -8,8 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;1,400&family=Lato:wght@400;700&display=swap">
 <style>
-/* Layout: a slim top bar with a spaced uppercase wordmark, then one reading column
-   on a warm off-white ground. The list is a stack of white rows, serif titles,
+/* Layout: one reading column on a warm off-white ground. The list is a stack of white rows, serif titles,
    grey sans metadata, green actions. A small name card stands in front of it. */
 :root {
   --bg: #F8F4EE;
@@ -44,21 +43,11 @@ body {
   line-height: 1.5;
 }
 
-.bar { background: var(--panel); box-shadow: 0 1px 2px var(--shadow); padding-top: env(safe-area-inset-top, 0px); }
-.bar-in {
-  max-width: 44rem; margin-inline: auto; min-height: 3.4rem;
-  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.2rem 1rem;
-  padding-block: 0.5rem;
-  padding-left: max(16px, env(safe-area-inset-left, 0px));
-  padding-right: max(16px, env(safe-area-inset-right, 0px));
-}
-.mark { font-family: var(--ui); font-size: 1.05rem; letter-spacing: 0.07em; text-transform: uppercase; }
-.who { display: flex; align-items: baseline; gap: 0.8rem; font-family: var(--ui); font-size: 0.95rem; color: var(--meta); }
-
 .page {
   max-width: 44rem; margin-inline: auto;
   display: flex; flex-direction: column; gap: 1.2rem;
-  padding-block: 2rem 4rem;
+  padding-top: calc(2rem + env(safe-area-inset-top, 0px));
+  padding-bottom: 4rem;
   padding-left: max(16px, env(safe-area-inset-left, 0px));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
 }
@@ -85,7 +74,13 @@ body {
 .actions { display: flex; align-items: center; gap: 1rem; }
 
 /* list */
+.whoami {
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem 1rem;
+  font-family: var(--ui); font-size: 0.95rem; color: var(--meta);
+}
+.whoami .act { align-self: auto; }
 .intro { margin: 0; max-width: 36rem; }
+.intro.owner { font-style: italic; }
 .notice { margin: 0; font-family: var(--ui); font-size: 0.95rem; color: var(--meta); }
 .notice.warn { color: var(--warn); }
 .section { margin: 0.6rem 0 -0.4rem; font-size: 1.5rem; font-weight: 400; line-height: 1.2; }
@@ -134,12 +129,6 @@ button { font: inherit; cursor: pointer; }
 </head>
 <body>
 
-<div class="bar">
-  <div class="bar-in">
-    <span class="mark">Roman's Wish List</span>
-    <span class="who" id="who"></span>
-  </div>
-</div>
 <main class="page" id="app"></main>
 
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>

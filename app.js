@@ -166,15 +166,6 @@
 
   /* ---------- views ---------- */
 
-  function renderBar() {
-    var who = document.getElementById("who");
-    who.replaceChildren();
-    if (S.name) {
-      who.append(h("span", { text: S.name }),
-        h("button", { class: "link", type: "button", text: "Switch name", onclick: signOut }));
-    }
-  }
-
   function loginView() {
     var names = knownNames();
     var isNew = S.pick === "__new";
@@ -310,7 +301,10 @@
 
   function listView() {
     var out = [];
-    out.push(h("p", { class: "intro", text: isOwner()
+    out.push(h("div", { class: "whoami" },
+      h("span", { text: "Signed in as " + S.name }),
+      h("button", { class: "act", type: "button", text: "Switch name", onclick: signOut })));
+    out.push(h("p", { class: "intro" + (isOwner() ? " owner" : ""), text: isOwner()
       ? "You're signed in as yourself, so anything that's been taken is hidden from you. You can change the list here, and everyone sees your changes."
       : "Press the button on anything you plan to give. It then shows as taken for everyone else, without your name, so nothing gets bought twice. Roman can't see any of it." }));
     out = out.concat(notices());
@@ -338,7 +332,6 @@
     var caret = null;
     try { if (focusId && typeof active.selectionStart === "number") caret = [active.selectionStart, active.selectionEnd]; } catch (e) {}
 
-    renderBar();
     var app = document.getElementById("app");
     app.replaceChildren.apply(app, S.name ? listView() : [loginView()]);
 
