@@ -1,0 +1,52 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Family trust model: anyone with the link may read and write, with no
+    // accounts, but only well-formed documents of the three kinds the page makes.
+
+    // The wishes themselves. Edited from the page by whoever picks "Roman".
+    match /items/{id} {
+      allow read: if true;
+      allow create, update: if validItem(request.resource.data);
+      allow delete: if true;
+    }
+
+    // Who plans to give what. A one-giver item uses the item's id as the doc id,
+    // and because updates are refused, a second person cannot take it over.
+    match /claims/{id} {
+      allow read: if true;
+      allow create: if validClaim(request.resource.data);
+      allow update: if false;
+      allow delete: if true;
+    }
+
+    // Names that have signed in, for the dropdown.
+    match /people/{id} {
+      allow read: if true;
+      allow create, update: if validPerson(request.resource.data);
+      allow delete: if false;
+    }
+
+    match /{other=**} { allow read, write: if false; }
+
+    function validItem(d) {
+      return d.keys().hasOnly(['title', 'details', 'shared', 'cta', 'order'])
+        && d.title is string && d.title.size() > 0 && d.title.size() <= 120
+        && d.details is string && d.details.size() <= 2000
+        && d.shared is bool
+        && (!('cta' in d) || (d.cta is string && d.cta.size() <= 30))
+        && d.order is number;
+    }
+    function validClaim(d) {
+      return d.keys().hasOnly(['item', 'name', 'at'])
+        && d.item is string && d.item.size() > 0 && d.item.size() <= 100
+        && d.name is string && d.name.size() > 0 && d.name.size() <= 30
+        && d.at is string && d.at.size() <= 40;
+    }
+    function validPerson(d) {
+      return d.keys().hasOnly(['name', 'at'])
+        && d.name is string && d.name.size() > 0 && d.name.size() <= 30
+        && d.at is string && d.at.size() <= 40;
+    }
+  }
+}
