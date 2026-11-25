@@ -5,6 +5,10 @@
 // Nobody needs an account. Picking the name "Roman" hides the picks and opens editing.
 (function () {
   var OWNER = "Roman";
+  // Signing in as Roman takes a passcode. Only its hash is kept here. This keeps
+  // family from wandering in by accident; it is not strong security.
+  var CODE_SALT = "roman-wish-list:";
+  var OWNER_HASH = "3efd2f336b98ec0145dac2692cd1ddda60119447998a793707a148d8dab6dc56";
 
   var store = {
     get: function (k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
@@ -17,12 +21,18 @@
     itemsStatus: "loading",  // loading | slow | ready | error  (the list itself)
     status: "idle",          // idle | loading | slow | ready | error  (the picks)
     pick: "", draft: "",     // the name card's dropdown value and typed name
+    code: "", codeWrong: false, checking: false,  // the passcode field shown for Roman
     edit: null,              // { id | null, title, details, shared } while the editor is open
     confirm: null,           // id of the item waiting on "Remove?"
     saving: false, editFlash: "",
     busy: null, flash: {}
   };
   var items = [], claims = [], people = [], stopClaims = null, timer = null;
+
+  // A browser that remembers the name Roman but never entered the passcode starts over.
+  if (S.name && S.name.toLowerCase() === OWNER.toLowerCase() && store.get("wl-owner") !== OWNER_HASH) {
+    S.name = ""; store.set("wl-name", "");
+  }
 
   function h(tag, attrs) {
     var n = document.createElement(tag), k;
@@ -155,7 +165,28 @@
     render();
   }
 
+  async function sha(text) {
+    var buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+    return Array.prototype.map.call(new Uint8Array(buf), function (b) { return ("0" + b.toString(16)).slice(-2); }).join("");
+  }
+  function focusCode() { var i = document.getElementById("owner-code"); if (i) i.focus(); }
+
+  // Choosing Roman: first show the passcode field, then check what was typed.
+  async function ownerSubmit() {
+    if (S.pick !== OWNER) { S.pick = OWNER; S.draft = ""; S.code = ""; S.codeWrong = false; render(); focusCode(); return; }
+    if (S.checking) return;
+    var code = S.code.trim();
+    if (!code) { focusCode(); return; }
+    S.checking = true;
+    var ok = false;
+    try { ok = (await sha(CODE_SALT + code)) === OWNER_HASH; } catch (e) {}
+    S.checking = false;
+    if (ok) { store.set("wl-owner", OWNER_HASH); S.code = ""; S.codeWrong = false; signIn(OWNER, false); }
+    else { S.code = ""; S.codeWrong = true; render(); focusCode(); }
+  }
+
   function signOut() {
+    store.set("wl-owner", "");
     if (stopClaims) { stopClaims(); stopClaims = null; }
     clearTimeout(timer);
     claims = []; S.status = "idle"; S.flash = {}; S.busy = null;
@@ -174,13 +205,14 @@
       var v = (isNew ? S.draft : S.pick).trim().slice(0, 30);
       if (!v || v === "__new") return;
       var match = names.filter(function (n) { return same(n, v); })[0];
+      if (match && same(match, OWNER)) { ownerSubmit(); return; }
       signIn(match || v, !match);
     } },
       h("div", { class: "field" },
         h("label", { for: "name-select", text: "Your name" }),
         h("select", { id: "name-select", onchange: function (e) {
-            S.pick = e.target.value; render();
-            var i = document.getElementById(S.pick === "__new" ? "name-input" : "name-select");
+            S.pick = e.target.value; S.code = ""; S.codeWrong = false; render();
+            var i = document.getElementById(S.pick === "__new" ? "name-input" : S.pick === OWNER ? "owner-code" : "name-select");
             if (i) i.focus();
           } },
           h("option", { value: "", text: "Choose your name" }),
@@ -192,6 +224,12 @@
         h("label", { for: "name-input", text: "Type your name" }),
         h("input", { id: "name-input", type: "text", maxlength: "30", autocomplete: "given-name",
           oninput: function (e) { S.draft = e.target.value; } })
+      ),
+      S.pick === OWNER && h("div", { class: "field" },
+        h("label", { for: "owner-code", text: "Passcode" }),
+        h("input", { id: "owner-code", type: "password", inputmode: "numeric", maxlength: "4", autocomplete: "off",
+          oninput: function (e) { S.code = e.target.value; } }),
+        S.codeWrong && h("p", { class: "flash", text: "That passcode isn't right." })
       ),
       h("button", { class: "btn", type: "submit", text: "Continue" })
     );
@@ -324,7 +362,7 @@
     return out;
   }
 
-  var KEEP_FOCUS = { "name-input": 1, "name-select": 1, "item-title": 1, "item-details": 1, "item-shared": 1 };
+  var KEEP_FOCUS = { "owner-code": 1, "name-input": 1, "name-select": 1, "item-title": 1, "item-details": 1, "item-shared": 1 };
 
   function render() {
     var active = document.activeElement;
@@ -338,6 +376,7 @@
     var el;
     if ((el = document.getElementById("name-select"))) el.value = S.pick;
     if ((el = document.getElementById("name-input"))) el.value = S.draft;
+    if ((el = document.getElementById("owner-code"))) el.value = S.code;
     if (S.edit) {
       if ((el = document.getElementById("item-title"))) el.value = S.edit.title;
       if ((el = document.getElementById("item-details"))) el.value = S.edit.details;
